@@ -38,12 +38,10 @@ SECURITY_SETTINGS = {
         'stapler-class': 'hudson.markup.EscapedMarkupFormatter',
         '$class': 'hudson.markup.EscapedMarkupFormatter'
     },
-    'jenkins-security-s2m-MasterKillSwitchConfiguration': {
-    },
     'org-jenkinsci-main-modules-sshd-SSHD': {
         'port': {
             'value': '',
-            'type': 'random'
+            'type': 'disabled'
         }
     },
     'jenkins-CLI': {
@@ -60,12 +58,17 @@ SECURITY_SETTINGS = {
     'jenkins-model-DownloadSettings': {
         'useBrowser': False
     },
-    'org-jenkinsci-main-modules-sshd-SSHD': {
-        'port': {
-            'value': '',
-            'type': 'random'
-        }
+    'slaveAgentPort': {
+        'value': '',
+        'type': 'disable'
     },
+    'agentProtocol': [
+        'CLI-connect',
+        'CLI2-connect',
+        'JNLP-connect',
+        'JNLP2-connect',
+        'JNLP4-connect'
+    ],
     'core:apply': ''
 }
 
@@ -83,6 +86,7 @@ def crumbed_jenkins(jenkins):
         },
         headers={'Content-Type': 'application/x-www-form-urlencoded'}
     )
+    log.info('Enabled Jenkins security')
 
     crumbed = Jenkins(
         jenkins.baseurl,
@@ -99,6 +103,7 @@ def crumbed_jenkins(jenkins):
         },
         headers={'Content-Type': 'application/x-www-form-urlencoded'}
     )
+    log.info('Disabled Jenkins security')
 
 
 def test_invoke_job_with_file(crumbed_jenkins):

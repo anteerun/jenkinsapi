@@ -92,8 +92,8 @@ class Job(JenkinsBase, MutableJenkinsThing):
         data = super(Job, self).poll(tree=tree)
         if not tree:
             self._data = self._add_missing_builds(self._data)
-        else:
-            return data
+
+        return data
 
     # pylint: disable=E1123
     # Unexpected keyword arg 'params'
@@ -450,7 +450,11 @@ class Job(JenkinsBase, MutableJenkinsThing):
         """
         if not self.is_queued():
             raise UnknownQueueItem()
-        return QueueItem(self.jenkins, **self._data['queueItem'])
+        q_item = self.poll(tree='queueItem[url]')
+        qi_url = urlparse.urljoin(
+            self.jenkins.baseurl, q_item['queueItem']['url']
+        )
+        return QueueItem(qi_url, self.jenkins)
 
     def is_running(self):
         # self.poll()
@@ -633,7 +637,7 @@ class Job(JenkinsBase, MutableJenkinsThing):
 
     def is_enabled(self):
         data = self.poll(tree='color')
-        return data.get('color', None) != 'disabled'
+        return 'disabled' not in data.get('color', '')
 
     def disable(self):
         """
@@ -730,6 +734,8 @@ class Job(JenkinsBase, MutableJenkinsThing):
 
     def get_full_name(self):
         """
-        Get the full name for a job (including parent folders) from the job URL.
+        Get the full name for a job (including parent folders)
+        from the job URL.
         """
-        return Job.get_full_name_from_url_and_baseurl(self.url, self.jenkins.baseurl)
+        return Job.get_full_name_from_url_and_baseurl(
+            self.url, self.jenkins.baseurl)

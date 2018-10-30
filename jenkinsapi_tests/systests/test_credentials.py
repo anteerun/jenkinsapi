@@ -8,7 +8,6 @@ from jenkinsapi.credentials import Credentials
 from jenkinsapi.credentials import UsernamePasswordCredential
 from jenkinsapi.credentials import SecretTextCredential
 from jenkinsapi.credential import SSHKeyCredential
-from jenkinsapi.custom_exceptions import JenkinsAPIException
 
 log = logging.getLogger(__name__)
 
@@ -59,10 +58,12 @@ def test_update_user_pass_credential(jenkins):
 
     cred = creds[cred_descr]
     cred.userName = 'anotheruser'
-    cred.password = 'password'
+    cred.password = 'password2'
 
-    with pytest.raises(JenkinsAPIException):
-        creds[cred_descr] = cred
+    cred = creds[cred_descr]
+    assert isinstance(cred, UsernamePasswordCredential) is True
+    assert cred.userName == 'anotheruser'
+    assert cred.password == 'password2'
 
 
 def test_create_ssh_credential(jenkins):
@@ -91,14 +92,8 @@ def test_create_ssh_credential(jenkins):
         'passphrase': '',
         'private_key': '/tmp/key'
     }
-    creds[cred_descr] = SSHKeyCredential(cred_dict)
-
-    assert cred_descr in creds
-    cred = creds[cred_descr]
-    assert isinstance(cred, SSHKeyCredential) is True
-    assert cred.description == cred_descr
-
-    del creds[cred_descr]
+    with pytest.raises(ValueError):
+        creds[cred_descr] = SSHKeyCredential(cred_dict)
 
     cred_dict = {
         'description': cred_descr,
@@ -106,14 +101,8 @@ def test_create_ssh_credential(jenkins):
         'passphrase': '',
         'private_key': '~/.ssh/key'
     }
-    creds[cred_descr] = SSHKeyCredential(cred_dict)
-
-    assert cred_descr in creds
-    cred = creds[cred_descr]
-    assert isinstance(cred, SSHKeyCredential) is True
-    assert cred.description == cred_descr
-
-    del creds[cred_descr]
+    with pytest.raises(ValueError):
+        creds[cred_descr] = SSHKeyCredential(cred_dict)
 
     cred_dict = {
         'description': cred_descr,

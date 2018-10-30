@@ -23,6 +23,7 @@ class Credentials(JenkinsBase):
 
     Returns a list of Credential Objects.
     """
+
     def __init__(self, baseurl, jenkins_obj):
         self.baseurl = baseurl
         self.jenkins = jenkins_obj
@@ -92,19 +93,32 @@ class Credentials(JenkinsBase):
                 '%s/createCredentials'
                 % self.baseurl
             )
+            try:
+                self.jenkins.requester.post_and_confirm_status(
+                    url, params={}, data=urlencode(params)
+                )
+            except JenkinsAPIException as jae:
+                raise JenkinsAPIException('Latest version of Credentials '
+                                          'plugin is required to be able '
+                                          'to create credentials. '
+                                          'Original exception: %s' % str(jae))
         else:
-            raise JenkinsAPIException('Updating credentials is not supported '
-                                      'by jenkinsapi')
-
-        try:
-            self.jenkins.requester.post_and_confirm_status(
-                url, params={}, data=urlencode(params)
+            cred_id = self[description].credential_id
+            credential.credential_id = cred_id
+            params = credential.get_attributes_xml()
+            url = (
+                '%s/credential/%s/config.xml'
+                % (self.baseurl, cred_id)
             )
-        except JenkinsAPIException as jae:
-            raise JenkinsAPIException('Latest version of Credentials '
-                                      'plugin is required to be able '
-                                      'to create/update credentials. '
-                                      'Original exception: %s' % str(jae))
+            try:
+                self.jenkins.requester.post_xml_and_confirm_status(
+                    url, params={}, data=params
+                )
+            except JenkinsAPIException as jae:
+                raise JenkinsAPIException('Latest version of Credentials '
+                                          'plugin is required to be able '
+                                          'to update credentials. '
+                                          'Original exception: %s' % str(jae))
 
         self.poll()
         self.credentials = self._data['credentials']
@@ -158,6 +172,7 @@ class Credentials2x(Credentials):
 
     Returns a list of Credential Objects.
     """
+
     def _poll(self, tree=None):
         url = self.python_api_url(self.baseurl) + '?depth=2'
         data = self.get_data(url, tree=tree)
@@ -170,3 +185,31 @@ class Credentials2x(Credentials):
         data['credentials'] = new_creds
 
         return data
+
+
+class CredentialsById(Credentials2x):
+    """
+    This class provides a container-like API which gives
+    access to all global credentials on a Jenkins node.
+
+    Returns a list of Credential Objects.
+    """
+
+    def __iter__(self):
+        for cred in self.credentials.values():
+            yield cred.credential_id
+
+    def __contains__(self, credential_id):
+        return credential_id in self.keys()
+
+    def iteritems(self):
+        for cred in self.credentials.values():
+            yield cred.credential_id, cred
+
+    def __getitem__(self, credential_id):
+        for cred in self.credentials.values():
+            if cred.credential_id == credential_id:
+                return cred
+
+        raise KeyError('Credential with credential_id "%s" not found'
+                       % credential_id)
